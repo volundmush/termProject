@@ -2,7 +2,15 @@ import java.util.*;
 
 public class Trie {
 
-    private record CharFrequency(char character, int frequency) implements Comparable<CharFrequency> {
+    private static class CharFrequency implements Comparable<CharFrequency> {
+
+        public final char character;
+        public final int frequency;
+
+        public CharFrequency(char character, int frequency) {
+            this.character = character;
+            this.frequency = frequency;
+        }
 
         @Override
         public int compareTo(CharFrequency other) {
@@ -37,7 +45,23 @@ public class Trie {
 
     }
 
-    public record TriePair(String word, Trie.TrieNode node) {}
+    public static class TriePair {
+        public final String word;
+        public final Trie.TrieNode node;
+
+        public TriePair(String word, Trie.TrieNode node) {
+            this.word = word;
+            this.node = node;
+        }
+
+        public String word() {
+            return word;
+        }
+
+        public Trie.TrieNode node() {
+            return node;
+        }
+    }
 
     private final TrieNode root;
 
