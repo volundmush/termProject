@@ -18,24 +18,29 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class HangmanPlayer
 {
 
     // Since the only thing we know about our given word is the length, we can store all words of
     // a given length in a hashmap
-    private final Trie trie = new Trie();
+
+    private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
+
+    private Runtime runtime = null;
 
     private class GameState {
         boolean[] guessedLetters = new boolean[26];
-        ArrayList<Trie.TriePair> possibleEndNodes = null;
+        WordGroup wordGroup = null;
         ArrayList<Character> freq = null;
 
         Character lastGuess = null;
 
         public GameState(String currentWord) {
-            possibleEndNodes = trie.getPossibleEndNodes(currentWord.length());
-            freq = trie.getSortedFrequencyList(possibleEndNodes, guessedLetters);
+            WordGroup prev = wordsByLength.get(currentWord.length());
+            wordGroup = new WordGroup(prev);
+            freq = wordGroup.getSortedFrequencyList(guessedLetters);
         }
     }
 
@@ -45,15 +50,17 @@ public class HangmanPlayer
     // initialize HangmanPlayer with a file of English words
     public HangmanPlayer(String wordFile)
     {
+        this.runtime = Runtime.getRuntime();
         try {
             FileReader hiddenWordFile = new FileReader(wordFile);
             BufferedReader input = new BufferedReader(hiddenWordFile);
             String line;
-            Runtime runtime = Runtime.getRuntime();
             runtime.gc(); // Suggest a garbage collection
             long usedMemoryBefore = runtime.totalMemory() - runtime.freeMemory();
             while ((line = input.readLine()) != null) {
-                trie.insert(line.toLowerCase());
+                // insert into wordsByLength's wordgroup based on line's string length.
+                int length = line.length();
+                wordsByLength.computeIfAbsent(length, k -> new WordGroup()).insert(line);
             }
             long usedMemoryAfter = runtime.totalMemory() - runtime.freeMemory();
             System.out.println("Memory used: " + (usedMemoryAfter - usedMemoryBefore));
@@ -97,31 +104,24 @@ public class HangmanPlayer
     // b.         false               partial word without the guessed letter
     public void feedback(boolean isCorrectGuess, String currentWord)
     {
-        int count = gameState.possibleEndNodes.size();
+        int count = gameState.wordGroup.words.size();
         if(isCorrectGuess) {
-            // Iterate through gameState.possibleEndNodes and remove any nodes that are no longer possible candidates.
-            // We can determine this by using currentWord vs the key of the node, where spaces in currentWord are wildcards.
-            gameState.possibleEndNodes.removeIf(entry -> {
-                String key = entry.word();
-                for(int i = 0; i < currentWord.length(); i++) {
-                    if(currentWord.charAt(i) == ' ') {
-                        continue;
-                    }
-                    if(currentWord.charAt(i) != key.charAt(i)) {
-                        return true;
-                    }
-                }
-                return false;
-            });
+            gameState.wordGroup.processGoodPattern(currentWord);
         } else {
             // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
-            gameState.possibleEndNodes.removeIf(entry -> entry.word().contains(gameState.lastGuess.toString()));
+            gameState.wordGroup.processBadLetter(gameState.lastGuess);
         }
-        int afterCount = gameState.possibleEndNodes.size();
+        int afterCount = gameState.wordGroup.words.size();
+        if(afterCount == 0) {
+            System.out.println("No words found.");
+
+        }
 
         // Regenerate our frequency list.
-        if(afterCount != count)
-            gameState.freq = trie.getSortedFrequencyList(gameState.possibleEndNodes, gameState.guessedLetters);
+        if(afterCount != count) {
+            gameState.freq = gameState.wordGroup.getSortedFrequencyList(gameState.guessedLetters);
+        }
+
     }
 
 }
