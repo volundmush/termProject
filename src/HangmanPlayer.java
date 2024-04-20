@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class HangmanPlayer
 {
@@ -27,20 +28,16 @@ public class HangmanPlayer
     // a given length in a hashmap
 
     private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
+    private HashMap<Integer, DecisionTree> decisionTrees = new HashMap<>();
 
     private Runtime runtime = null;
 
     private class GameState {
-        boolean[] guessedLetters = new boolean[26];
-        WordGroup wordGroup = null;
-        ArrayList<Character> freq = null;
-
-        Character lastGuess = null;
+        DecisionTree.Node currentNode = null;
 
         public GameState(String currentWord) {
-            WordGroup prev = wordsByLength.get(currentWord.length());
-            wordGroup = new WordGroup(prev);
-            freq = wordGroup.getSortedFrequencyList(guessedLetters);
+            DecisionTree tree = decisionTrees.get(currentWord.length());
+            currentNode = tree.root;
         }
     }
 
@@ -68,6 +65,11 @@ public class HangmanPlayer
             System.out.println("Error: " + e);
 
         }
+
+        for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
+            decisionTrees.put(entry.getKey(), new DecisionTree(entry.getValue(), entry.getKey()));
+        }
+
     }
 
     // based on the current (partial or intitially blank) word
@@ -81,16 +83,7 @@ public class HangmanPlayer
         if(isNewWord) {
             gameState = new GameState(currentWord);
         }
-
-        int index = 0;
-        // while character at index is in guessedLetters, increase...
-        while(gameState.guessedLetters[gameState.freq.get(index) - 'a']) {
-            index++;
-        }
-
-        gameState.lastGuess = gameState.freq.get(index);
-        gameState.guessedLetters[gameState.lastGuess - 'a'] = true;
-        return gameState.lastGuess;
+        return gameState.currentNode.value;
     }
 
     // feedback on the guessed letter
@@ -104,24 +97,13 @@ public class HangmanPlayer
     // b.         false               partial word without the guessed letter
     public void feedback(boolean isCorrectGuess, String currentWord)
     {
-        int count = gameState.wordGroup.words.size();
         if(isCorrectGuess) {
-            gameState.wordGroup.processGoodPattern(currentWord);
+            // If the guess was correct, we move to the yes node.
+            gameState.currentNode = gameState.currentNode.yes;
         } else {
-            // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
-            gameState.wordGroup.processBadLetter(gameState.lastGuess);
+            // If the guess was incorrect, we move to the no node.
+            gameState.currentNode = gameState.currentNode.no;
         }
-        int afterCount = gameState.wordGroup.words.size();
-        if(afterCount == 0) {
-            System.out.println("No words found.");
-
-        }
-
-        // Regenerate our frequency list.
-        if(afterCount != count) {
-            gameState.freq = gameState.wordGroup.getSortedFrequencyList(gameState.guessedLetters);
-        }
-
     }
 
 }

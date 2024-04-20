@@ -77,6 +77,17 @@ public class WordGroup {
         });
     }
 
+    public void processGoodLetter(char goodLetter) {
+        // Iterate through words, removing all which do not contain goodLetter. As they are removed, call removeFromFrequencyMap on them.
+        words.removeIf(entry -> {
+            if (!entry.letters[goodLetter - 'a']) {
+                removeFromFrequencyMap(entry.letters);
+                return true;
+            }
+            return false;
+        });
+    }
+
     public void processGoodPattern(String pattern) {
         // pattern is a word where spaces are wildcards but there may be lowercase letters as well. These lowercase letters are the only ones that matter.
         // Iterate through words, eliminating all words which do not match the pattern. As they are removed, call removeFromFrequencyMap on them.
@@ -125,7 +136,7 @@ public class WordGroup {
         // Prepare a list of CharFrequency objects for sorting
         List<CharFrequency> freqList = new ArrayList<>();
         for (int i = 0; i < frequencyMap.length; i++) {
-            if (frequencyMap[i] > 0) {
+            if (frequencyMap[i] > 0 && !guessedLetters[i]) {
                 freqList.add(new CharFrequency((char) (i + 'a'), frequencyMap[i]));
             }
         }
