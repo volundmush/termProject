@@ -35,6 +35,9 @@ public class WordGroup {
 
     // copy constructor
     public WordGroup(WordGroup other) {
+        if(other == null) {
+            return;
+        }
         this.words = new ArrayList<>(other.words);
         frequencyMap = new short[26];
         System.arraycopy(other.frequencyMap, 0, this.frequencyMap, 0, other.frequencyMap.length);

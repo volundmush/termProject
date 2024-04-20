@@ -27,18 +27,49 @@ public class HangmanPlayer
     // Since the only thing we know about our given word is the length, we can store all words of
     // a given length in a hashmap
 
-    private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
+    //private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
+    private SuffixTree suffixTree = new SuffixTree();
 
     private Runtime runtime = null;
 
     private class GameState {
+        String word = null;
         boolean[] guessedLetters = new boolean[26];
-        WordGroup wordGroup = null;
         char lastGuess = '0';
+        int numGuesses = 0;
+        int numGoodGuesses = 0;
+        int numBadGuesses = 0;
 
         public GameState(String currentWord) {
-            WordGroup prev = wordsByLength.get(currentWord.length());
-            wordGroup = new WordGroup(prev);
+            this.word = currentWord;
+
+        }
+
+        public char bestGuess() {
+            char best = 0;
+            if(numGoodGuesses == 0) {
+                best = suffixTree.getBestBasicGuess(guessedLetters);
+            } else {
+                best = suffixTree.getBestGuess(this.word, guessedLetters);
+            }
+
+            lastGuess = best;
+            guessedLetters[best - 'a'] = true;
+
+            return best;
+        }
+
+        public void feedback(boolean isCorrectGuess, String currentWord) {
+            this.word = currentWord;
+            numGuesses++;
+            if(isCorrectGuess) {
+                numGoodGuesses++;
+                //wordGroup.processGoodPattern(lastGuess, word);
+            } else {
+                numBadGuesses++;
+                // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
+                //wordGroup.processBadLetter(lastGuess);
+            }
         }
     }
 
@@ -59,22 +90,12 @@ public class HangmanPlayer
             while ((line = input.readLine()) != null) {
                 // insert into wordsByLength's wordgroup based on line's string length.
                 line = line.toLowerCase();
-                int length = line.length();
-                if(knownWords.contains(line)) {
-                    continue;
-                }
-                wordsByLength.computeIfAbsent(length, k -> new WordGroup()).insert(line);
-                knownWords.add(line);
+                suffixTree.insert(line);
             }
             long usedMemoryAfter = runtime.totalMemory() - runtime.freeMemory();
             System.out.println("Memory used: " + (usedMemoryAfter - usedMemoryBefore));
         } catch (Exception e) {
             System.out.println("Error: " + e);
-
-        }
-
-        for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
-            entry.getValue().words.trimToSize();
         }
     }
 
@@ -89,11 +110,7 @@ public class HangmanPlayer
         if(isNewWord) {
             gameState = new GameState(currentWord);
         }
-
-        char best = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
-        gameState.lastGuess = best;
-        gameState.guessedLetters[best - 'a'] = true;
-        return best;
+        return gameState.bestGuess();
     }
 
     // feedback on the guessed letter
@@ -107,12 +124,7 @@ public class HangmanPlayer
     // b.         false               partial word without the guessed letter
     public void feedback(boolean isCorrectGuess, String currentWord)
     {
-        if(isCorrectGuess) {
-            gameState.wordGroup.processGoodPattern(gameState.lastGuess, currentWord);
-        } else {
-            // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
-            gameState.wordGroup.processBadLetter(gameState.lastGuess);
-        }
+        gameState.feedback(isCorrectGuess, currentWord);
     }
 
 }
