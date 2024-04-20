@@ -42,7 +42,7 @@ public class WordGroup {
 
 
     public void insert(String word) {
-        String lower = word.toLowerCase().intern();
+        String lower = word.intern();
         Word newWord = new Word(lower);
         words.add(newWord);
         addToFrequencyMap(newWord.letters);
@@ -77,35 +77,17 @@ public class WordGroup {
         });
     }
 
-    private static class CharFrequency implements Comparable<CharFrequency> {
-
-        public final char character;
-        public final int frequency;
-
-        public CharFrequency(char character, int frequency) {
-            this.character = character;
-            this.frequency = frequency;
-        }
-
-        @Override
-        public int compareTo(CharFrequency other) {
-            // Sort in descending order of frequency
-            return Integer.compare(other.frequency, this.frequency);
-        }
-    }
-
     public void processGoodPattern(char goodLetter, String pattern) {
         // pattern is a word where spaces are wildcards but there may be lowercase letters as well. These lowercase letters are the only ones that matter.
         // Iterate through words, eliminating all words which do not match the pattern. As they are removed, call removeFromFrequencyMap on them.
         // We can trust that pattern and words are the same length.
 
-        ArrayList<CharFrequency> knownLetters = new ArrayList<>();
+        ArrayList<Integer> checkPos = new ArrayList<>();
 
-        // let's first gather up all known letters and their positions.
+        // let's first gather up the newly-known goodLetter positions.
         for (int i = 0; i < pattern.length(); i++) {
-            char c = pattern.charAt(i);
-            if (c != ' ') {
-                knownLetters.add(new CharFrequency(c, i));
+            if (pattern.charAt(i) == goodLetter) {
+                checkPos.add(i);
             }
         }
 
@@ -118,8 +100,8 @@ public class WordGroup {
                 return true;
             }
             // If that passes, check if the word doesn't match the pattern.
-            for(CharFrequency pos : knownLetters) {
-                if(entry.word.charAt(pos.frequency) != pos.character) {
+            for(int pos : checkPos) {
+                if(entry.word.charAt(pos) != goodLetter) {
                     removeFromFrequencyMap(entry.letters);
                     return true;
                 }

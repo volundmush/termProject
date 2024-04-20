@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class HangmanPlayer
 {
@@ -48,6 +49,7 @@ public class HangmanPlayer
     public HangmanPlayer(String wordFile)
     {
         this.runtime = Runtime.getRuntime();
+        HashSet<String> knownWords = new HashSet<>();
         try {
             FileReader hiddenWordFile = new FileReader(wordFile);
             BufferedReader input = new BufferedReader(hiddenWordFile);
@@ -56,14 +58,23 @@ public class HangmanPlayer
             long usedMemoryBefore = runtime.totalMemory() - runtime.freeMemory();
             while ((line = input.readLine()) != null) {
                 // insert into wordsByLength's wordgroup based on line's string length.
+                line = line.toLowerCase();
                 int length = line.length();
+                if(knownWords.contains(line)) {
+                    continue;
+                }
                 wordsByLength.computeIfAbsent(length, k -> new WordGroup()).insert(line);
+                knownWords.add(line);
             }
             long usedMemoryAfter = runtime.totalMemory() - runtime.freeMemory();
             System.out.println("Memory used: " + (usedMemoryAfter - usedMemoryBefore));
         } catch (Exception e) {
             System.out.println("Error: " + e);
 
+        }
+
+        for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
+            entry.getValue().words.trimToSize();
         }
     }
 
