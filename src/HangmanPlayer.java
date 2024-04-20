@@ -33,14 +33,11 @@ public class HangmanPlayer
     private class GameState {
         boolean[] guessedLetters = new boolean[26];
         WordGroup wordGroup = null;
-        ArrayList<Character> freq = null;
-
-        Character lastGuess = null;
+        char lastGuess = '0';
 
         public GameState(String currentWord) {
             WordGroup prev = wordsByLength.get(currentWord.length());
             wordGroup = new WordGroup(prev);
-            freq = wordGroup.getSortedFrequencyList(guessedLetters);
         }
     }
 
@@ -82,15 +79,10 @@ public class HangmanPlayer
             gameState = new GameState(currentWord);
         }
 
-        int index = 0;
-        // while character at index is in guessedLetters, increase...
-        while(gameState.guessedLetters[gameState.freq.get(index) - 'a']) {
-            index++;
-        }
-
-        gameState.lastGuess = gameState.freq.get(index);
-        gameState.guessedLetters[gameState.lastGuess - 'a'] = true;
-        return gameState.lastGuess;
+        char best = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
+        gameState.lastGuess = best;
+        gameState.guessedLetters[best - 'a'] = true;
+        return best;
     }
 
     // feedback on the guessed letter
@@ -104,24 +96,12 @@ public class HangmanPlayer
     // b.         false               partial word without the guessed letter
     public void feedback(boolean isCorrectGuess, String currentWord)
     {
-        int count = gameState.wordGroup.words.size();
         if(isCorrectGuess) {
-            gameState.wordGroup.processGoodPattern(currentWord);
+            gameState.wordGroup.processGoodPattern(gameState.lastGuess, currentWord);
         } else {
             // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
             gameState.wordGroup.processBadLetter(gameState.lastGuess);
         }
-        int afterCount = gameState.wordGroup.words.size();
-        if(afterCount == 0) {
-            System.out.println("No words found.");
-
-        }
-
-        // Regenerate our frequency list.
-        if(afterCount != count) {
-            gameState.freq = gameState.wordGroup.getSortedFrequencyList(gameState.guessedLetters);
-        }
-
     }
 
 }

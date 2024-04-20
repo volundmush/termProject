@@ -77,32 +77,6 @@ public class WordGroup {
         });
     }
 
-    public void processGoodPattern(String pattern) {
-        // pattern is a word where spaces are wildcards but there may be lowercase letters as well. These lowercase letters are the only ones that matter.
-        // Iterate through words, eliminating all words which do not match the pattern. As they are removed, call removeFromFrequencyMap on them.
-        // We can trust that pattern and words are the same length.
-
-        // let's first gather up a HashMap of known letters and their positions.
-        HashMap<Integer, Character> knownLetters = new HashMap<>();
-        for (int i = 0; i < pattern.length(); i++) {
-            if (pattern.charAt(i) != ' ') {
-                knownLetters.put(i, pattern.charAt(i));
-            }
-        }
-
-        // Now we can iterate through the words and remove any that don't match the pattern.
-        // use knownLetters to check if the word matches the pattern.
-        words.removeIf(entry -> {
-            for(Map.Entry<Integer, Character> entry2 : knownLetters.entrySet()) {
-                if(entry.word.charAt(entry2.getKey()) != entry2.getValue()) {
-                    removeFromFrequencyMap(entry.letters);
-                    return true;
-                }
-            }
-            return false;
-        });
-    }
-
     private static class CharFrequency implements Comparable<CharFrequency> {
 
         public final char character;
@@ -120,25 +94,54 @@ public class WordGroup {
         }
     }
 
-    public ArrayList<Character> getSortedFrequencyList(boolean[] guessedLetters) {
+    public void processGoodPattern(char goodLetter, String pattern) {
+        // pattern is a word where spaces are wildcards but there may be lowercase letters as well. These lowercase letters are the only ones that matter.
+        // Iterate through words, eliminating all words which do not match the pattern. As they are removed, call removeFromFrequencyMap on them.
+        // We can trust that pattern and words are the same length.
 
-        // Prepare a list of CharFrequency objects for sorting
-        List<CharFrequency> freqList = new ArrayList<>();
-        for (int i = 0; i < frequencyMap.length; i++) {
-            if (frequencyMap[i] > 0) {
-                freqList.add(new CharFrequency((char) (i + 'a'), frequencyMap[i]));
+        ArrayList<CharFrequency> knownLetters = new ArrayList<>();
+
+        // let's first gather up all known letters and their positions.
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+            if (c != ' ') {
+                knownLetters.add(new CharFrequency(c, i));
             }
         }
 
-        // Sort by frequency in descending order
-        Collections.sort(freqList);
+        // Now we can iterate through the words and remove any that don't match the pattern.
+        // use knownLetters to check if the word matches the pattern.
+        words.removeIf(entry -> {
+            // first, check if the word does not contain goodLetter...
+            if (!entry.letters[goodLetter - 'a']) {
+                removeFromFrequencyMap(entry.letters);
+                return true;
+            }
+            // If that passes, check if the word doesn't match the pattern.
+            for(CharFrequency pos : knownLetters) {
+                if(entry.word.charAt(pos.frequency) != pos.character) {
+                    removeFromFrequencyMap(entry.letters);
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
 
-        // Convert sorted frequencies to a list of characters
-        ArrayList<Character> sortedCharacters = new ArrayList<>();
-        for (CharFrequency cf : freqList) {
-            sortedCharacters.add(cf.character);
+
+    public char getBestGuess(boolean[] guessedLetters) {
+        // Using frequencyMap, find the highest index that doesn't appear in guessedLetters. Then generate the character from that index.
+
+        int bestIndex = -1;
+        int bestValue = -1;
+
+        for (int i = 0; i < 26; i++) {
+            if (!guessedLetters[i] && frequencyMap[i] > bestValue) {
+                bestValue = frequencyMap[i];
+                bestIndex = i;
+            }
         }
 
-        return sortedCharacters;
+        return (char)(bestIndex + 'a');
     }
 }
