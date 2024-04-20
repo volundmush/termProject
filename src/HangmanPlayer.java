@@ -17,8 +17,6 @@
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 
 public class HangmanPlayer
@@ -28,7 +26,7 @@ public class HangmanPlayer
     // a given length in a hashmap
 
     //private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
-    private SuffixTree suffixTree = new SuffixTree();
+    private SuffixTrie trie = new SuffixTrie();
 
     private Runtime runtime = null;
 
@@ -48,9 +46,9 @@ public class HangmanPlayer
         public char bestGuess() {
             char best = 0;
             if(numGoodGuesses == 0) {
-                best = suffixTree.getBestBasicGuess(guessedLetters);
+                best = trie.getBestBasicGuess(guessedLetters);
             } else {
-                best = suffixTree.getBestGuess(this.word, guessedLetters);
+                best = trie.getBestGuess(this.word, guessedLetters);
             }
 
             lastGuess = best;
@@ -90,7 +88,7 @@ public class HangmanPlayer
             while ((line = input.readLine()) != null) {
                 // insert into wordsByLength's wordgroup based on line's string length.
                 line = line.toLowerCase();
-                suffixTree.insert(line);
+                trie.insert(line);
             }
             long usedMemoryAfter = runtime.totalMemory() - runtime.freeMemory();
             System.out.println("Memory used: " + (usedMemoryAfter - usedMemoryBefore));

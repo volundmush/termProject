@@ -1,6 +1,6 @@
 import java.util.HashMap;
 
-public class SuffixTree {
+public class Trie {
     public static class Node {
         public HashMap<String, Node> children;
         public Node parent;
@@ -12,15 +12,16 @@ public class SuffixTree {
             this.value = value;
         }
 
-        public void insert(String suffix) {
+        public Node insert(String suffix) {
             Node current = this;
+            Node createdNode = null;  // To keep track of the deepest new node created
 
             while (!suffix.isEmpty()) {
                 Node next = null;
                 String nextKey = null;
                 int longestMatch = 0;
 
-                if(current.children == null) {
+                if (current.children == null) {
                     current.children = new HashMap<>();
                 }
 
@@ -40,11 +41,11 @@ public class SuffixTree {
                     Node newNode = new Node(current, suffix);
                     newNode.count = 1;  // Starting a new node, a new suffix is completely inserted here.
                     current.children.put(suffix, newNode);
-                    break;
+                    return newNode;  // Return this new node as it is the deepest created
                 } else if (longestMatch == nextKey.length() && longestMatch == suffix.length()) {
                     // Exact match, just update the count
                     next.count++;
-                    break;
+                    return null;  // No new node created, return null
                 } else if (longestMatch < nextKey.length()) {
                     // Partial match, need to split the node
                     Node splitNode = new Node(current, nextKey.substring(0, longestMatch));
@@ -64,16 +65,18 @@ public class SuffixTree {
                         Node remainderNode = new Node(splitNode, remainder);
                         remainderNode.count = 1;  // New suffix being added.
                         splitNode.children.put(remainder, remainderNode);
+                        return remainderNode;  // Return this new node as it is the deepest created
                     } else {
                         splitNode.count = 1; // The split node now represents the end of the suffix.
+                        return splitNode;  // Return the split node as it is the new node representing the end
                     }
-                    break;
                 } else {
                     // Continue down the tree
                     current = next;
                     suffix = suffix.substring(longestMatch);
                 }
             }
+            return createdNode;  // Return the last created node if any
         }
 
         private int getMatchLength(String suffix, String key) {
@@ -90,9 +93,17 @@ public class SuffixTree {
     public Node root = new Node(null, "");
 
     public void insert(String word) {
-        for(int i = 0; i < word.length(); i++) {
-            root.insert(word.substring(i));
+        //
+    }
+
+    public String getFullWord(Node leaf) {
+        StringBuilder sb = new StringBuilder();
+        // walk up the parentage to get the full word
+        while (leaf != null) {
+            sb.insert(0, leaf.value);
+            leaf = leaf.parent;
         }
+        return sb.toString();
     }
 
     public char getBestBasicGuess(boolean[] guessedLetters) {
@@ -116,12 +127,6 @@ public class SuffixTree {
         return (char)(bestIndex + 'a');
     }
 
-    public char getBestGuess(String pattern, boolean[] guessedLetters) {
-        // Word is a lowercase string. spaces are wildcards/placeholders for unknown letters.
-        // We want to use the SuffixTree to figure out the best possible letters we can guess, that aren't in
-        // guessedLetters.
 
-
-    }
 
 }
