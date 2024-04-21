@@ -16,7 +16,7 @@
      Guesses are based off of most frequent letters in the WordGroup's frequencyMap that have yet to be guessed.
      On good and bad guesses, incorrect candidates are filtered out of the words list and the frequencyMap is updated.
 
-     The GameState keeps track of guessed letters.
+     The GameState keeps track of guessed letters and holds on to the (modified) WordGroup for the current word.
 
 */
 
