@@ -1,16 +1,22 @@
 /*
 
   Authors (group members): Andrew Bastien, Christian Stevens, Ryan LaPolt
-  Email addresses of group members: abastien2021@my.fit.edu, <missing>, <missing>
-  Group name: 23a
+  Email addresses of group members: abastien2021@my.fit.edu, <missing>, rlapolt2022@my.fit.edu
+  Group name: 23a (Gallows Humor)
 
   Course: CSE 2010
   Section: 23
 
   Description of the overall algorithm:
-     Uses a Trie data structure where each node is of variable length of prefix.
-     All words are loaded into the Trie. Nodes where a word ends are indexed by word length.
-     The most frequently found characters in the remaining possible end nodes are guessed first.
+     Groups input words into different ArrayLists by string length, using a helper class called WordGroup.
+     Each WordGroup contains a frequencyMap short[26] array that stores the frequency of each unique letter in the words.
+
+     When a new Word is selected, a GameState is created for it which copies the WordGroup for the known string length.
+
+     Guesses are based off of most frequent letters in the WordGroup's frequencyMap that have yet to be guessed.
+     On good and bad guesses, incorrect candidates are filtered out of the words list and the frequencyMap is updated.
+
+     The GameState keeps track of guessed letters.
 
 */
 
@@ -37,7 +43,6 @@ public class HangmanPlayer
     private class GameState {
         boolean[] guessedLetters = new boolean[26];
         WordGroup wordGroup = null;
-        char lastGuess = '0';
 
         char nextBestGuess = '0';
 
@@ -63,8 +68,7 @@ public class HangmanPlayer
             FileReader hiddenWordFile = new FileReader(wordFile);
             BufferedReader input = new BufferedReader(hiddenWordFile);
             String line;
-            runtime.gc(); // Suggest a garbage collection
-            long usedMemoryBefore = runtime.totalMemory() - runtime.freeMemory();
+            runtime.gc();
             while ((line = input.readLine()) != null) {
                 // insert into wordsByLength's wordgroup based on line's string length.
                 line = line.toLowerCase();
@@ -75,19 +79,17 @@ public class HangmanPlayer
                 wordsByLength.computeIfAbsent(length, k -> new WordGroup()).insert(line);
                 knownWords.add(line);
             }
-            long usedMemoryAfter = runtime.totalMemory() - runtime.freeMemory();
-            System.out.println("Memory used: " + (usedMemoryAfter - usedMemoryBefore));
         } catch (Exception e) {
             System.out.println("Error: " + e);
 
         }
 
-        // Clear the knownLetters bitset to save memory.
-        WordGroup.knownLetters = null;
-
+        // Initialize all WordGroups
+        boolean[] guessedLetters = new boolean[26];
         for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
-            entry.getValue().initialize();
+            entry.getValue().initialize(guessedLetters);
         }
+        runtime.gc();
     }
 
     // based on the current (partial or intitially blank) word
@@ -125,10 +127,11 @@ public class HangmanPlayer
             gameState = new GameState(grp);
             lastGuess = grp.bestFirstGuess;
             grp = null;
+            // Call the garbage collector to free up memory.
             runtime.gc();
             this.isNewWord = false;
         } else {
-            lastGuess = gameState.lastGuess;
+            lastGuess = gameState.nextBestGuess;
         }
         gameState.guessedLetters[lastGuess - 'a'] = true;
 
@@ -138,8 +141,9 @@ public class HangmanPlayer
             // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
             gameState.wordGroup.processBadLetter(lastGuess);
         }
+
+        // Set next best guess.
         gameState.nextBestGuess = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
-        gameState.lastGuess = gameState.nextBestGuess;
 
     }
 

@@ -1,51 +1,11 @@
-import java.util.*;
+import java.util.ArrayList;
 
 public class WordGroup {
 
     // This class will contain all words of the same string length, which do not contain spaces.
     // It is used by Hangman for guessing the next character.
 
-    // Temporary storage bitset for known letters to deduplicate.
-    public static HashMap<Integer, boolean[]> knownLetters = new HashMap<>();
-
-    public static class Word {
-        public final String word;
-        public final boolean[] letters;
-
-        public Word(String word) {
-            this.word = word;
-            this.letters = containsLetters(word);
-        }
-
-        private static boolean[] containsLetters(String word) {
-            boolean[] letters = new boolean[26];
-            for (char c : word.toCharArray()) {
-                letters[c - 'a'] = true;
-            }
-
-            // check if we have knownLetters for this word length.
-            // first convert letters into an Integer...
-            int key = 0;
-            for (int i = 0; i < 26; i++) {
-                key = key << 1;
-                if (letters[i]) {
-                    key |= 1;
-                }
-            }
-
-            // check if we have knownLetters for this key.
-            if(knownLetters.containsKey(key)) {
-                return knownLetters.get(key);
-            }
-
-            // if we don't have knownLetters for this key, we need to add it.
-            knownLetters.put(key, letters);
-
-            return letters;
-        }
-    }
-
-    public ArrayList<Word> words = null;
+    public ArrayList<String> words = null;
 
     // Used to store the frequency of unique letters in the words.
     public short[] frequencyMap = null;
@@ -60,47 +20,47 @@ public class WordGroup {
     // copy constructor
     public WordGroup(WordGroup other) {
         this.words = new ArrayList<>(other.words);
-        frequencyMap = new short[26];
+        this.frequencyMap = other.frequencyMap.clone();
         this.bestFirstGuess = other.bestFirstGuess;
-        System.arraycopy(other.frequencyMap, 0, this.frequencyMap, 0, other.frequencyMap.length);
     }
 
-    public void initialize() {
+    public void initialize(boolean[] guessedLetters) {
         // Called after all inserts have been made. This will allow us to generate the best guess.
         words.trimToSize();
-        bestFirstGuess = getBestGuess(new boolean[26]);
+        bestFirstGuess = getBestGuess(guessedLetters);
     }
 
 
     public void insert(String word) {
-        Word newWord = new Word(word);
-        words.add(newWord);
-        addToFrequencyMap(newWord.letters);
+        words.add(word);
+        addToFrequencyMap(word);
     }
 
-    private void addToFrequencyMap(boolean[] letters) {
+    private void addToFrequencyMap(String word) {
         // increment frequencyMap for each letter seen in sequence.
-        for (int i = 0; i < 26; i++) {
-            if (letters[i]) {
-                frequencyMap[i]++;
-            }
+        boolean[] seenLetters = new boolean[26];
+        for (char c : word.toCharArray()) {
+            if(seenLetters[c - 'a']) continue;
+            frequencyMap[c - 'a']++;
+            seenLetters[c - 'a'] = true;
         }
     }
 
-    private void removeFromFrequencyMap(boolean[] letters) {
+    private void removeFromFrequencyMap(String word) {
         // decrement frequencyMap for each letter seen in sequence.
-        for (int i = 0; i < 26; i++) {
-            if (letters[i]) {
-                frequencyMap[i]--;
-            }
+        boolean[] seenLetters = new boolean[26];
+        for (char c : word.toCharArray()) {
+            if(seenLetters[c - 'a']) continue;
+            frequencyMap[c - 'a']--;
+            seenLetters[c - 'a'] = true;
         }
     }
 
     public void processBadLetter(char badLetter) {
         // Iterate through words, removing all which contain badLetter. As they are removed, call removeFromFrequencyMap on them.
         words.removeIf(entry -> {
-            if (entry.letters[badLetter - 'a']) {
-                removeFromFrequencyMap(entry.letters);
+            if (entry.indexOf(badLetter) != -1) {
+                removeFromFrequencyMap(entry);
                 return true;
             }
             return false;
@@ -125,14 +85,10 @@ public class WordGroup {
         // use knownLetters to check if the word matches the pattern.
         words.removeIf(entry -> {
             // first, check if the word does not contain goodLetter...
-            if (!entry.letters[goodLetter - 'a']) {
-                removeFromFrequencyMap(entry.letters);
-                return true;
-            }
             // If that passes, check if the word doesn't match the pattern.
             for(int pos : checkPos) {
-                if(entry.word.charAt(pos) != goodLetter) {
-                    removeFromFrequencyMap(entry.letters);
+                if(entry.charAt(pos) != goodLetter) {
+                    removeFromFrequencyMap(entry);
                     return true;
                 }
             }
