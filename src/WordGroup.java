@@ -5,6 +5,9 @@ public class WordGroup {
     // This class will contain all words of the same string length, which do not contain spaces.
     // It is used by Hangman for guessing the next character.
 
+    // Temporary storage bitset for known letters to deduplicate.
+    public static HashMap<Integer, boolean[]> knownLetters = new HashMap<>();
+
     public static class Word {
         public final String word;
         public final boolean[] letters;
@@ -19,6 +22,25 @@ public class WordGroup {
             for (char c : word.toCharArray()) {
                 letters[c - 'a'] = true;
             }
+
+            // check if we have knownLetters for this word length.
+            // first convert letters into an Integer...
+            int key = 0;
+            for (int i = 0; i < 26; i++) {
+                key = key << 1;
+                if (letters[i]) {
+                    key |= 1;
+                }
+            }
+
+            // check if we have knownLetters for this key.
+            if(knownLetters.containsKey(key)) {
+                return knownLetters.get(key);
+            }
+
+            // if we don't have knownLetters for this key, we need to add it.
+            knownLetters.put(key, letters);
+
             return letters;
         }
     }
@@ -27,6 +49,8 @@ public class WordGroup {
 
     // Used to store the frequency of unique letters in the words.
     public short[] frequencyMap = null;
+
+    char[] badSequence = new char[6];
 
     public WordGroup() {
         words = new ArrayList<>();
@@ -38,6 +62,22 @@ public class WordGroup {
         this.words = new ArrayList<>(other.words);
         frequencyMap = new short[26];
         System.arraycopy(other.frequencyMap, 0, this.frequencyMap, 0, other.frequencyMap.length);
+        this.badSequence = Arrays.copyOf(other.badSequence, other.badSequence.length);
+    }
+
+    public void initialize() {
+        // Called after all inserts have been made. This will allow us to generate the best guess.
+        words.trimToSize();
+
+        // We can also generate the badSequence array here.
+        boolean[] guessedLetters = new boolean[26];
+        WordGroup badSequenceGroup = new WordGroup(this);
+        for (int i = 0; i < 6; i++) {
+            badSequence[i] = badSequenceGroup.getBestGuess(guessedLetters);
+            guessedLetters[badSequence[i] - 'a'] = true;
+            badSequenceGroup.processBadLetter(badSequence[i]);
+        }
+
     }
 
 

@@ -17,7 +17,6 @@
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -29,16 +28,29 @@ public class HangmanPlayer
 
     private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
 
+    private WordGroup grp;
+
     private Runtime runtime = null;
+
+    boolean isNewWord = true;
 
     private class GameState {
         boolean[] guessedLetters = new boolean[26];
         WordGroup wordGroup = null;
         char lastGuess = '0';
 
+        char nextBestGuess = '0';
+
+        int numGoodGuesses = 0;
+        int badIndex = 0;
+
         public GameState(String currentWord) {
             WordGroup prev = wordsByLength.get(currentWord.length());
             wordGroup = new WordGroup(prev);
+        }
+
+        public GameState(WordGroup group) {
+            wordGroup = new WordGroup(group);
         }
     }
 
@@ -73,8 +85,11 @@ public class HangmanPlayer
 
         }
 
+        // Clear the knownLetters bitset to save memory.
+        WordGroup.knownLetters = null;
+
         for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
-            entry.getValue().words.trimToSize();
+            entry.getValue().initialize();
         }
     }
 
@@ -87,13 +102,12 @@ public class HangmanPlayer
     public char guess(String currentWord, boolean isNewWord)
     {
         if(isNewWord) {
-            gameState = new GameState(currentWord);
+            this.isNewWord = true;
+            grp = wordsByLength.get(currentWord.length());
+            return grp.badSequence[0];
+        } else {
+            return gameState.nextBestGuess;
         }
-
-        char best = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
-        gameState.lastGuess = best;
-        gameState.guessedLetters[best - 'a'] = true;
-        return best;
     }
 
     // feedback on the guessed letter
@@ -107,12 +121,38 @@ public class HangmanPlayer
     // b.         false               partial word without the guessed letter
     public void feedback(boolean isCorrectGuess, String currentWord)
     {
+        char lastGuess = '0';
+        if(this.isNewWord) {
+            // Calling the garbage collector manually to free up memory.
+            // This has a dramatic impact on the memory usage of the program.
+            gameState = new GameState(grp);
+            lastGuess = grp.badSequence[0];
+            grp = null;
+            runtime.gc();
+            this.isNewWord = false;
+        } else {
+            lastGuess = gameState.lastGuess;
+        }
+        gameState.guessedLetters[lastGuess - 'a'] = true;
+
         if(isCorrectGuess) {
-            gameState.wordGroup.processGoodPattern(gameState.lastGuess, currentWord);
+            gameState.numGoodGuesses++;
+            gameState.wordGroup.processGoodPattern(lastGuess, currentWord);
         } else {
             // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
-            gameState.wordGroup.processBadLetter(gameState.lastGuess);
+            gameState.wordGroup.processBadLetter(lastGuess);
         }
+
+        if(gameState.numGoodGuesses == 0) {
+            gameState.badIndex++;
+            gameState.nextBestGuess = gameState.wordGroup.badSequence[gameState.badIndex];
+        } else {
+            gameState.nextBestGuess = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
+        }
+        gameState.lastGuess = gameState.nextBestGuess;
+
+
+
     }
 
 }
