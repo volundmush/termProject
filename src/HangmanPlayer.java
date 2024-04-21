@@ -41,9 +41,6 @@ public class HangmanPlayer
 
         char nextBestGuess = '0';
 
-        int numGoodGuesses = 0;
-        int badIndex = 0;
-
         public GameState(String currentWord) {
             WordGroup prev = wordsByLength.get(currentWord.length());
             wordGroup = new WordGroup(prev);
@@ -104,7 +101,7 @@ public class HangmanPlayer
         if(isNewWord) {
             this.isNewWord = true;
             grp = wordsByLength.get(currentWord.length());
-            return grp.badSequence[0];
+            return grp.bestFirstGuess;
         } else {
             return gameState.nextBestGuess;
         }
@@ -126,7 +123,7 @@ public class HangmanPlayer
             // Calling the garbage collector manually to free up memory.
             // This has a dramatic impact on the memory usage of the program.
             gameState = new GameState(grp);
-            lastGuess = grp.badSequence[0];
+            lastGuess = grp.bestFirstGuess;
             grp = null;
             runtime.gc();
             this.isNewWord = false;
@@ -136,22 +133,13 @@ public class HangmanPlayer
         gameState.guessedLetters[lastGuess - 'a'] = true;
 
         if(isCorrectGuess) {
-            gameState.numGoodGuesses++;
             gameState.wordGroup.processGoodPattern(lastGuess, currentWord);
         } else {
             // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
             gameState.wordGroup.processBadLetter(lastGuess);
         }
-
-        if(gameState.numGoodGuesses == 0) {
-            gameState.badIndex++;
-            gameState.nextBestGuess = gameState.wordGroup.badSequence[gameState.badIndex];
-        } else {
-            gameState.nextBestGuess = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
-        }
+        gameState.nextBestGuess = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
         gameState.lastGuess = gameState.nextBestGuess;
-
-
 
     }
 

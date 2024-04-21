@@ -50,7 +50,7 @@ public class WordGroup {
     // Used to store the frequency of unique letters in the words.
     public short[] frequencyMap = null;
 
-    char[] badSequence = new char[6];
+    char bestFirstGuess = '0';
 
     public WordGroup() {
         words = new ArrayList<>();
@@ -61,23 +61,14 @@ public class WordGroup {
     public WordGroup(WordGroup other) {
         this.words = new ArrayList<>(other.words);
         frequencyMap = new short[26];
+        this.bestFirstGuess = other.bestFirstGuess;
         System.arraycopy(other.frequencyMap, 0, this.frequencyMap, 0, other.frequencyMap.length);
-        this.badSequence = Arrays.copyOf(other.badSequence, other.badSequence.length);
     }
 
     public void initialize() {
         // Called after all inserts have been made. This will allow us to generate the best guess.
         words.trimToSize();
-
-        // We can also generate the badSequence array here.
-        boolean[] guessedLetters = new boolean[26];
-        WordGroup badSequenceGroup = new WordGroup(this);
-        for (int i = 0; i < 6; i++) {
-            badSequence[i] = badSequenceGroup.getBestGuess(guessedLetters);
-            guessedLetters[badSequence[i] - 'a'] = true;
-            badSequenceGroup.processBadLetter(badSequence[i]);
-        }
-
+        bestFirstGuess = getBestGuess(new boolean[26]);
     }
 
 
