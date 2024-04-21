@@ -73,8 +73,7 @@ public class WordGroup {
 
 
     public void insert(String word) {
-        String lower = word.intern();
-        Word newWord = new Word(lower);
+        Word newWord = new Word(word);
         words.add(newWord);
         addToFrequencyMap(newWord.letters);
     }
