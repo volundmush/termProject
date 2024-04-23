@@ -4,42 +4,42 @@ public class DecisionTree {
     public static class Node {
         public HashMap<String, Node> children;
 
-        public final char letter;
+        public final byte letter;
         public Node no;
-        public Node parent;
 
-        public Node(Node parent, char letter) {
-            this.parent = parent;
+        public Node(byte letter) {
             this.letter = letter;
         }
 
-        private void processGuess(String word, String mask, WordGroup group, int goodGuesses, int badGuesses, boolean[] guessedLetters) {
+        private void processGuess(String word, StringBuilder mask, WordGroup group, int goodGuesses, int badGuesses, boolean[] guessedLetters) {
             boolean isCorrect = false;
             for (int i = 0; i < word.length(); i++) {
                 if (word.charAt(i) == letter) {
                     isCorrect = true;
-                    mask = mask.substring(0, i) + letter + mask.substring(i + 1);
+                    mask.setCharAt(i, (char) letter);
                 }
             }
             // we solved the word so just return.
-            if(mask.equals(word)) {
+            if(mask.indexOf(" ") == -1) {
                 return;
             }
             WordGroup newGroup = new WordGroup(group);
             guessedLetters[letter - 'a'] = true;
+
             if(isCorrect) {
                 goodGuesses++;
-                newGroup.processGoodPattern(letter, mask);
+                String newMask = mask.toString().intern();
+                newGroup.processGoodPattern((char) letter, newMask);
                 char nextBestGuess = newGroup.getBestGuess(guessedLetters);
                 // we have a new mask;
                 if(children == null) {
                     children = new HashMap<>();
                 }
-                if(children.containsKey(mask)) {
-                    children.get(mask).processGuess(word, mask, newGroup, goodGuesses, badGuesses, guessedLetters);
+                if(children.containsKey(newMask)) {
+                    children.get(newMask).processGuess(word, mask, newGroup, goodGuesses, badGuesses, guessedLetters);
                 } else {
-                    Node child = new Node(this, nextBestGuess);
-                    children.put(mask, child);
+                    Node child = new Node((byte) nextBestGuess);
+                    children.put(newMask, child);
                     child.processGuess(word, mask, newGroup, goodGuesses, badGuesses, guessedLetters);
                 }
             } else {
@@ -49,10 +49,10 @@ public class DecisionTree {
                     // bad end, no need to go further.
                     return;
                 }
-                newGroup.processBadLetter(letter);
+                newGroup.processBadLetter((char) letter);
                 char nextBestGuess = newGroup.getBestGuess(guessedLetters);
                 if(no == null) {
-                    no = new Node(this, nextBestGuess);
+                    no = new Node((byte) nextBestGuess);
                 }
                 no.processGuess(word, mask, newGroup, goodGuesses, badGuesses, guessedLetters);
             }
@@ -61,16 +61,14 @@ public class DecisionTree {
 
     public Node root;
 
-    private String stringToMask(String word) {
+    private StringBuilder stringToMask(String word) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < word.length(); i++) {
-            sb.append(' ');
-        }
-        return sb.toString();
+        sb.append(" ".repeat(word.length()));
+        return sb;
     }
 
     public DecisionTree(WordGroup group, int length) {
-        root = new Node(null, group.bestFirstGuess);
+        root = new Node((byte) group.bestFirstGuess);
         for(byte[] bytes : group.words) {
             StringBuilder sb = new StringBuilder();
             for(byte b : bytes) {

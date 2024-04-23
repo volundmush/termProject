@@ -23,6 +23,7 @@
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -64,20 +65,29 @@ public class HangmanPlayer
         }
 
         // Initialize all WordGroups
-        // track start time...
-        long startTime = System.currentTimeMillis();
+        // let's create a threadpool to initialize all the wordgroups
+        ArrayList<Thread> threads = new ArrayList<>();
         boolean[] guessedLetters = new boolean[26];
         for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
-            entry.getValue().initialize(guessedLetters);
-            decisionTrees.put(entry.getKey(), new DecisionTree(entry.getValue(), entry.getKey()));
-            System.out.println("WordGroup of length " + entry.getKey() + " initialized.");
-            long currentTime = System.currentTimeMillis();
-            System.out.println("Time elapsed: " + (currentTime - startTime) + "ms");
+            threads.add(new Thread(() -> {
+                entry.getValue().initialize(guessedLetters);
+                decisionTrees.put(entry.getKey(), new DecisionTree(entry.getValue(), entry.getKey()));
+                System.out.println("WordGroup of length " + entry.getKey() + " initialized.");
+            }));
         }
+        for(Thread t : threads) {
+            t.start();
+        }
+        for(Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                System.out.println("Error: " + e);
+            }
+        }
+        threads.clear();
         wordsByLength.clear();
         runtime.gc();
-        long endTime = System.currentTimeMillis();
-        System.out.println("Total time elapsed: " + (endTime - startTime) + "ms");
     }
 
     // based on the current (partial or intitially blank) word
@@ -91,7 +101,7 @@ public class HangmanPlayer
         if(isNewWord) {
             this.currentNode = decisionTrees.get(currentWord.length()).root;
         }
-        return this.currentNode.letter;
+        return (char) this.currentNode.letter;
     }
 
     // feedback on the guessed letter
