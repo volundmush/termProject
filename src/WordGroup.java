@@ -77,6 +77,7 @@ public class WordGroup {
             }
             return false;
         });
+        words.trimToSize();
     }
 
     public void processGoodPattern(char goodLetter, String pattern) {
@@ -102,6 +103,7 @@ public class WordGroup {
             }
             return false;  // Keep the word as it matches the pattern
         });
+        words.trimToSize();
     }
 
 

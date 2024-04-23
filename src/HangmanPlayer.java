@@ -9,6 +9,9 @@
 
   Description of the overall algorithm:
      Groups input words into different ArrayLists by string length, using a helper class called WordGroup.
+     Since words are always going to be lowercase string length, we use byte[] arrays instead of String to save on RAM.
+     After all, Java uses U16 encoding for Strings, which is 2 bytes per character. Unnecessary.
+
      Each WordGroup contains a frequencyMap short[26] array that stores the frequency of each unique letter in the words.
 
      When a new Word is selected, a GameState is created for it which copies the WordGroup for the known string length.
