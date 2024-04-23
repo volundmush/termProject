@@ -35,7 +35,7 @@ public class HangmanPlayer
     // Since the only thing we know about our given word is the length, we can store all words of
     // a given length in a hashmap
 
-    private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
+    private final HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
 
     private WordGroup grp;
 
@@ -43,16 +43,11 @@ public class HangmanPlayer
 
     boolean isNewWord = true;
 
-    private class GameState {
+    private static class GameState {
         boolean[] guessedLetters = new boolean[26];
         WordGroup wordGroup = null;
 
         char nextBestGuess = '0';
-
-        public GameState(String currentWord) {
-            WordGroup prev = wordsByLength.get(currentWord.length());
-            wordGroup = new WordGroup(prev);
-        }
 
         public GameState(WordGroup group) {
             wordGroup = new WordGroup(group);
@@ -69,11 +64,14 @@ public class HangmanPlayer
         HashSet<String> knownWords = new HashSet<>();
         try {
             FileReader hiddenWordFile = new FileReader(wordFile);
-            BufferedReader input = new BufferedReader(hiddenWordFile);
-            String line;
+            BufferedReader input = new BufferedReader(hiddenWordFile, 256 * 1024);
             runtime.gc();
-            while ((line = input.readLine()) != null) {
+            while(true) {
                 // insert into wordsByLength's wordgroup based on line's string length.
+                String line = input.readLine();
+                if(line == null) {
+                    break;
+                }
                 line = line.toLowerCase();
                 int length = line.length();
                 if(knownWords.contains(line)) {
