@@ -31,39 +31,18 @@ public class HangmanPlayer
 
     // Since the only thing we know about our given word is the length, we can store all words of
     // a given length in a hashmap
+    private HashMap<Integer, DecisionTree> decisionTrees = new HashMap<>();
 
-    private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
-
-    private WordGroup grp;
+    private DecisionTree.Node currentNode;
 
     private Runtime runtime = null;
-
-    boolean isNewWord = true;
-
-    private class GameState {
-        boolean[] guessedLetters = new boolean[26];
-        WordGroup wordGroup = null;
-
-        char nextBestGuess = '0';
-
-        public GameState(String currentWord) {
-            WordGroup prev = wordsByLength.get(currentWord.length());
-            wordGroup = new WordGroup(prev);
-        }
-
-        public GameState(WordGroup group) {
-            wordGroup = new WordGroup(group);
-        }
-    }
-
-    private GameState gameState = null;
-
 
     // initialize HangmanPlayer with a file of English words
     public HangmanPlayer(String wordFile)
     {
         this.runtime = Runtime.getRuntime();
         HashSet<String> knownWords = new HashSet<>();
+        HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
         try {
             FileReader hiddenWordFile = new FileReader(wordFile);
             BufferedReader input = new BufferedReader(hiddenWordFile);
@@ -85,11 +64,20 @@ public class HangmanPlayer
         }
 
         // Initialize all WordGroups
+        // track start time...
+        long startTime = System.currentTimeMillis();
         boolean[] guessedLetters = new boolean[26];
         for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
             entry.getValue().initialize(guessedLetters);
+            decisionTrees.put(entry.getKey(), new DecisionTree(entry.getValue(), entry.getKey()));
+            System.out.println("WordGroup of length " + entry.getKey() + " initialized.");
+            long currentTime = System.currentTimeMillis();
+            System.out.println("Time elapsed: " + (currentTime - startTime) + "ms");
         }
+        wordsByLength.clear();
         runtime.gc();
+        long endTime = System.currentTimeMillis();
+        System.out.println("Total time elapsed: " + (endTime - startTime) + "ms");
     }
 
     // based on the current (partial or intitially blank) word
@@ -101,12 +89,9 @@ public class HangmanPlayer
     public char guess(String currentWord, boolean isNewWord)
     {
         if(isNewWord) {
-            this.isNewWord = true;
-            grp = wordsByLength.get(currentWord.length());
-            return grp.bestFirstGuess;
-        } else {
-            return gameState.nextBestGuess;
+            this.currentNode = decisionTrees.get(currentWord.length()).root;
         }
+        return this.currentNode.letter;
     }
 
     // feedback on the guessed letter
@@ -120,31 +105,15 @@ public class HangmanPlayer
     // b.         false               partial word without the guessed letter
     public void feedback(boolean isCorrectGuess, String currentWord)
     {
-        char lastGuess = '0';
-        if(this.isNewWord) {
-            // Calling the garbage collector manually to free up memory.
-            // This has a dramatic impact on the memory usage of the program.
-            gameState = new GameState(grp);
-            lastGuess = grp.bestFirstGuess;
-            grp = null;
-            // Call the garbage collector to free up memory.
-            runtime.gc();
-            this.isNewWord = false;
-        } else {
-            lastGuess = gameState.nextBestGuess;
-        }
-        gameState.guessedLetters[lastGuess - 'a'] = true;
-
         if(isCorrectGuess) {
-            gameState.wordGroup.processGoodPattern(lastGuess, currentWord);
+            // We solved it!
+            if(currentWord.indexOf(' ') == -1) {
+                return;
+            }
+            this.currentNode = this.currentNode.children.get(currentWord);
         } else {
-            // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
-            gameState.wordGroup.processBadLetter(lastGuess);
+            this.currentNode = this.currentNode.no;
         }
-
-        // Set next best guess.
-        gameState.nextBestGuess = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
-
     }
 
 }
