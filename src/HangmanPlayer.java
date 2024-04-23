@@ -136,6 +136,10 @@ public class HangmanPlayer
         gameState.guessedLetters[lastGuess - 'a'] = true;
 
         if(isCorrectGuess) {
+            if(currentWord.indexOf(' ') == -1) {
+                // We have guessed the word.
+                return;
+            }
             gameState.wordGroup.processGoodPattern(lastGuess, currentWord);
         } else {
             // Iterate through GameState.possibleEndNodes and remove any nodes that contain the bad letter in the key.
