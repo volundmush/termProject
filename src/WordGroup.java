@@ -8,26 +8,32 @@ public class WordGroup {
     public ArrayList<byte[]> words = null;
 
     // Used to store the frequency of unique letters in the words.
-    public short[] frequencyMap = null;
+    public short[][] frequencyMap = null;
 
     char bestFirstGuess = '0';
 
-    public WordGroup() {
+    public WordGroup(int length) {
         words = new ArrayList<>();
-        frequencyMap = new short[26];
+        frequencyMap = new short[length][];
+        for (int i = 0; i < length; i++) {
+            frequencyMap[i] = new short[26];
+        }
     }
 
     // copy constructor
     public WordGroup(WordGroup other) {
         this.words = new ArrayList<>(other.words);
-        this.frequencyMap = other.frequencyMap.clone();
+        this.frequencyMap = new short[other.frequencyMap.length][];
+        for (int i = 0; i < other.frequencyMap.length; i++) {
+            this.frequencyMap[i] = other.frequencyMap[i].clone();
+        }
         this.bestFirstGuess = other.bestFirstGuess;
     }
 
-    public void initialize(boolean[] guessedLetters) {
+    public void initialize(String currentMask, boolean[] guessedLetters) {
         // Called after all inserts have been made. This will allow us to generate the best guess.
         words.trimToSize();
-        bestFirstGuess = getBestGuess(guessedLetters);
+        bestFirstGuess = getBestGuess(currentMask, guessedLetters);
     }
 
     public static byte[] stringToByteArray(String word) {
@@ -47,21 +53,15 @@ public class WordGroup {
 
     private void addToFrequencyMap(byte[] word) {
         // increment frequencyMap for each letter seen in sequence.
-        boolean[] seenLetters = new boolean[26];
-        for (byte c : word) {
-            if(seenLetters[c]) continue;
-            frequencyMap[c]++;
-            seenLetters[c] = true;
+        for (int i = 0; i < word.length; i++) {
+            frequencyMap[i][word[i]]++;
         }
     }
 
     private void removeFromFrequencyMap(byte[] word) {
         // decrement frequencyMap for each letter seen in sequence.
-        boolean[] seenLetters = new boolean[26];
-        for (byte c : word) {
-            if(seenLetters[c]) continue;
-            frequencyMap[c]--;
-            seenLetters[c] = true;
+        for (int i = 0; i < word.length; i++) {
+            frequencyMap[i][word[i]]--;
         }
     }
 
@@ -107,15 +107,24 @@ public class WordGroup {
     }
 
 
-    public char getBestGuess(boolean[] guessedLetters) {
+    public char getBestGuess(String currentMask, boolean[] guessedLetters) {
         // Using frequencyMap, find the highest index that doesn't appear in guessedLetters. Then generate the character from that index.
+        int[] totalFrequency = new int[26];
+        for(int i = 0; i < currentMask.length(); i++) {
+            if(currentMask.charAt(i) == ' ') {
+                for(int j = 0; j < 26; j++) {
+                    if(!guessedLetters[j])
+                        totalFrequency[j] += frequencyMap[i][j];
+                }
+            }
+        }
 
         int bestIndex = -1;
         int bestValue = -1;
 
         for (int i = 0; i < 26; i++) {
-            if (!guessedLetters[i] && frequencyMap[i] > bestValue) {
-                bestValue = frequencyMap[i];
+            if (totalFrequency[i] > bestValue) {
+                bestValue = totalFrequency[i];
                 bestIndex = i;
             }
         }

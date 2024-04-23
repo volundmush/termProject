@@ -79,7 +79,7 @@ public class HangmanPlayer
                 if(knownWords.contains(line)) {
                     continue;
                 }
-                wordsByLength.computeIfAbsent(length, k -> new WordGroup()).insert(line);
+                wordsByLength.computeIfAbsent(length, k -> new WordGroup(length)).insert(line);
                 knownWords.add(line);
             }
         } catch (Exception e) {
@@ -90,7 +90,7 @@ public class HangmanPlayer
         // Initialize all WordGroups
         boolean[] guessedLetters = new boolean[26];
         for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
-            entry.getValue().initialize(guessedLetters);
+            entry.getValue().initialize(" ".repeat(entry.getKey()), guessedLetters);
         }
         runtime.gc();
     }
@@ -105,8 +105,10 @@ public class HangmanPlayer
     {
         if(isNewWord) {
             this.isNewWord = true;
-            grp = wordsByLength.get(currentWord.length());
-            return grp.bestFirstGuess;
+            int length = currentWord.length();
+            this.grp = wordsByLength.get(length);
+            assert this.grp != null;
+            return this.grp.bestFirstGuess;
         } else {
             return gameState.nextBestGuess;
         }
@@ -127,9 +129,9 @@ public class HangmanPlayer
         if(this.isNewWord) {
             // Calling the garbage collector manually to free up memory.
             // This has a dramatic impact on the memory usage of the program.
-            gameState = new GameState(grp);
-            lastGuess = grp.bestFirstGuess;
-            grp = null;
+            gameState = new GameState(this.grp);
+            lastGuess = this.grp.bestFirstGuess;
+            this.grp = null;
             // Call the garbage collector to free up memory.
             runtime.gc();
             this.isNewWord = false;
@@ -150,7 +152,7 @@ public class HangmanPlayer
         }
 
         // Set next best guess.
-        gameState.nextBestGuess = gameState.wordGroup.getBestGuess(gameState.guessedLetters);
+        gameState.nextBestGuess = gameState.wordGroup.getBestGuess(currentWord, gameState.guessedLetters);
 
     }
 
