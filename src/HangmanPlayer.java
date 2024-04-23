@@ -26,6 +26,7 @@
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -35,7 +36,8 @@ public class HangmanPlayer
     // Since the only thing we know about our given word is the length, we can store all words of
     // a given length in a hashmap
 
-    private HashMap<Integer, WordGroup> wordsByLength = new HashMap<>();
+    private HashMap<Byte, WordGroup> wordsByLength = new HashMap<>();
+
 
     private WordGroup grp;
 
@@ -75,21 +77,20 @@ public class HangmanPlayer
             while ((line = input.readLine()) != null) {
                 // insert into wordsByLength's wordgroup based on line's string length.
                 line = line.toLowerCase();
-                int length = line.length();
-                if(knownWords.contains(line)) {
-                    continue;
-                }
-                wordsByLength.computeIfAbsent(length, k -> new WordGroup()).insert(line);
                 knownWords.add(line);
             }
+
         } catch (Exception e) {
             System.out.println("Error: " + e);
+        }
 
+        for(InternedStrings.Interned word : InternedStrings.intern(new ArrayList<>(knownWords.stream().toList()))) {
+            wordsByLength.computeIfAbsent(word.length, k -> new WordGroup()).insert(word);
         }
 
         // Initialize all WordGroups
         boolean[] guessedLetters = new boolean[26];
-        for(HashMap.Entry<Integer, WordGroup> entry : wordsByLength.entrySet()) {
+        for(HashMap.Entry<Byte, WordGroup> entry : wordsByLength.entrySet()) {
             entry.getValue().initialize(guessedLetters);
         }
         runtime.gc();
@@ -105,7 +106,7 @@ public class HangmanPlayer
     {
         if(isNewWord) {
             this.isNewWord = true;
-            grp = wordsByLength.get(currentWord.length());
+            grp = wordsByLength.get((byte)currentWord.length());
             return grp.bestFirstGuess;
         } else {
             return gameState.nextBestGuess;

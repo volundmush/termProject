@@ -5,7 +5,7 @@ public class WordGroup {
     // This class will contain all words of the same string length, which do not contain spaces.
     // It is used by Hangman for guessing the next character.
 
-    public ArrayList<byte[]> words = null;
+    public ArrayList<InternedStrings.Interned> words = null;
 
     // Used to store the frequency of unique letters in the words.
     public short[] frequencyMap = null;
@@ -39,26 +39,27 @@ public class WordGroup {
     }
 
 
-    public void insert(String word) {
-        byte[] wordBytes = stringToByteArray(word);
-        words.add(wordBytes);
-        addToFrequencyMap(wordBytes);
+    public void insert(InternedStrings.Interned word) {
+        words.add(word);
+        addToFrequencyMap(word);
     }
 
-    private void addToFrequencyMap(byte[] word) {
+    private void addToFrequencyMap(InternedStrings.Interned word) {
         // increment frequencyMap for each letter seen in sequence.
         boolean[] seenLetters = new boolean[26];
-        for (byte c : word) {
+        for (int i = word.start; i < (word.start + word.length); i++) {
+            byte c = (byte) (InternedStrings.data[i] - 'a');
             if(seenLetters[c]) continue;
             frequencyMap[c]++;
             seenLetters[c] = true;
         }
     }
 
-    private void removeFromFrequencyMap(byte[] word) {
+    private void removeFromFrequencyMap(InternedStrings.Interned word) {
         // decrement frequencyMap for each letter seen in sequence.
         boolean[] seenLetters = new boolean[26];
-        for (byte c : word) {
+        for (int i = word.start; i < (word.start + word.length); i++) {
+            byte c = (byte) (InternedStrings.data[i] - 'a');
             if(seenLetters[c]) continue;
             frequencyMap[c]--;
             seenLetters[c] = true;
@@ -69,7 +70,8 @@ public class WordGroup {
         // Iterate through words, removing all which contain badLetter. As they are removed, call removeFromFrequencyMap on them.
         byte checkLetter = (byte)(badLetter - 'a');
         words.removeIf(entry -> {
-            for(byte b : entry) {
+            for(int i = entry.start; i < (entry.start + entry.length); i++) {
+                byte b = (byte) (InternedStrings.data[i] - 'a');
                 if(b == checkLetter) {
                     removeFromFrequencyMap(entry);
                     return true;
@@ -93,10 +95,11 @@ public class WordGroup {
 
         // Filter out words that do not match the exact pattern of goodLetter
         words.removeIf(entry -> {
-            for (int i = 0; i < entry.length; i++) {
+            for (int i = entry.start; i < (entry.start + entry.length); i++) {
                 // Check if positions of goodLetter in word match the pattern
-                if ((entry[i] == checkLetter && !isGoodPosition[i]) || // goodLetter where it shouldn't be
-                        (isGoodPosition[i] && entry[i] != checkLetter)) {  // Not goodLetter where it should be
+                byte b = (byte) (InternedStrings.data[i] - 'a');
+                if ((b == checkLetter && !isGoodPosition[i - entry.start]) || // goodLetter where it shouldn't be
+                        (isGoodPosition[i - entry.start] && b != checkLetter)) {  // Not goodLetter where it should be
                     removeFromFrequencyMap(entry);
                     return true;  // Remove word as it doesn't match the pattern
                 }
