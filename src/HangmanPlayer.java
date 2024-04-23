@@ -1,7 +1,7 @@
 /*
 
   Authors (group members): Andrew Bastien, Christian Stevens, Ryan LaPolt
-  Email addresses of group members: abastien2021@my.fit.edu, <missing>, rlapolt2022@my.fit.edu
+  Email addresses of group members: abastien2021@my.fit.edu, cstevens2023@my.fit.edu, rlapolt2022@my.fit.edu
   Group name: 23a (Gallows Humor)
 
   Course: CSE 2010

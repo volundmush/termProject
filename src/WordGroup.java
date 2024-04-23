@@ -5,7 +5,7 @@ public class WordGroup {
     // This class will contain all words of the same string length, which do not contain spaces.
     // It is used by Hangman for guessing the next character.
 
-    public ArrayList<String> words = null;
+    public ArrayList<byte[]> words = null;
 
     // Used to store the frequency of unique letters in the words.
     public short[] frequencyMap = null;
@@ -30,69 +30,77 @@ public class WordGroup {
         bestFirstGuess = getBestGuess(guessedLetters);
     }
 
-
-    public void insert(String word) {
-        words.add(word);
-        addToFrequencyMap(word);
+    public static byte[] stringToByteArray(String word) {
+        byte[] result = new byte[word.length()];
+        for (int i = 0; i < word.length(); i++) {
+            result[i] = (byte)(word.charAt(i) - 'a');
+        }
+        return result;
     }
 
-    private void addToFrequencyMap(String word) {
+
+    public void insert(String word) {
+        byte[] wordBytes = stringToByteArray(word);
+        words.add(wordBytes);
+        addToFrequencyMap(wordBytes);
+    }
+
+    private void addToFrequencyMap(byte[] word) {
         // increment frequencyMap for each letter seen in sequence.
         boolean[] seenLetters = new boolean[26];
-        for (char c : word.toCharArray()) {
-            if(seenLetters[c - 'a']) continue;
-            frequencyMap[c - 'a']++;
-            seenLetters[c - 'a'] = true;
+        for (byte c : word) {
+            if(seenLetters[c]) continue;
+            frequencyMap[c]++;
+            seenLetters[c] = true;
         }
     }
 
-    private void removeFromFrequencyMap(String word) {
+    private void removeFromFrequencyMap(byte[] word) {
         // decrement frequencyMap for each letter seen in sequence.
         boolean[] seenLetters = new boolean[26];
-        for (char c : word.toCharArray()) {
-            if(seenLetters[c - 'a']) continue;
-            frequencyMap[c - 'a']--;
-            seenLetters[c - 'a'] = true;
+        for (byte c : word) {
+            if(seenLetters[c]) continue;
+            frequencyMap[c]--;
+            seenLetters[c] = true;
         }
     }
 
     public void processBadLetter(char badLetter) {
         // Iterate through words, removing all which contain badLetter. As they are removed, call removeFromFrequencyMap on them.
+        byte checkLetter = (byte)(badLetter - 'a');
         words.removeIf(entry -> {
-            if (entry.indexOf(badLetter) != -1) {
-                removeFromFrequencyMap(entry);
-                return true;
+            for(byte b : entry) {
+                if(b == checkLetter) {
+                    removeFromFrequencyMap(entry);
+                    return true;
+                }
             }
             return false;
         });
     }
 
     public void processGoodPattern(char goodLetter, String pattern) {
-        // pattern is a word where spaces are wildcards but there may be lowercase letters as well. These lowercase letters are the only ones that matter.
-        // Iterate through words, eliminating all words which do not match the pattern. As they are removed, call removeFromFrequencyMap on them.
-        // We can trust that pattern and words are the same length.
+        byte checkLetter = (byte)(goodLetter - 'a');
+        boolean[] isGoodPosition = new boolean[pattern.length()];  // Tracks valid positions for checkLetter
 
-        ArrayList<Integer> checkPos = new ArrayList<>();
-
-        // let's first gather up the newly-known goodLetter positions.
+        // Mark the positions where goodLetter must appear
         for (int i = 0; i < pattern.length(); i++) {
             if (pattern.charAt(i) == goodLetter) {
-                checkPos.add(i);
+                isGoodPosition[i] = true;
             }
         }
 
-        // Now we can iterate through the words and remove any that don't match the pattern.
-        // use knownLetters to check if the word matches the pattern.
+        // Filter out words that do not match the exact pattern of goodLetter
         words.removeIf(entry -> {
-            // first, check if the word does not contain goodLetter...
-            // If that passes, check if the word doesn't match the pattern.
-            for(int pos : checkPos) {
-                if(entry.charAt(pos) != goodLetter) {
+            for (int i = 0; i < entry.length; i++) {
+                // Check if positions of goodLetter in word match the pattern
+                if ((entry[i] == checkLetter && !isGoodPosition[i]) || // goodLetter where it shouldn't be
+                        (isGoodPosition[i] && entry[i] != checkLetter)) {  // Not goodLetter where it should be
                     removeFromFrequencyMap(entry);
-                    return true;
+                    return true;  // Remove word as it doesn't match the pattern
                 }
             }
-            return false;
+            return false;  // Keep the word as it matches the pattern
         });
     }
 
